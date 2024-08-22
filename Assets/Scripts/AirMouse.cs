@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using Google.XR.Cardboard;
 
 public class AirMouse : MonoBehaviour
 {
@@ -28,6 +30,8 @@ public class AirMouse : MonoBehaviour
     Material groundCircleInstanceMaterial;
     RaycastHit hit;
     GameObject clickObject;
+    private bool isInteracting;
+    private GameObject selectedObject;
 
     void Start()
     {
@@ -93,10 +97,23 @@ public class AirMouse : MonoBehaviour
         if (Input.GetMouseButtonUp(0)) // 왼쪽 마우스 버튼에서 손을 뗌
         {
             clickObject = hit.collider.gameObject;
+            selectedObject = null;
             isMousePressed = false;
             if (isCurveActive && validGroundPoint && (((1 << clickObject.layer) & groundLayer) != 0))
             {
                 TeleportToGroundPoint();
+            }
+            if(clickObject.layer == LayerMask.NameToLayer("INTERACTUI"))
+            {
+                Button button = clickObject.transform.GetComponent<Button>();
+                if (button != null)
+                {
+                    // 마우스 왼쪽 버튼을 눌렀을 때 버튼 클릭 이벤트를 실행
+                    {
+                        button.onClick.Invoke(); // 버튼의 onClick 이벤트 실행
+                        Debug.Log("Button clicked: " + hit.transform.name);
+                    }
+                }
             }
             isCurveActive = false;
             HideGroundCircle();
@@ -105,7 +122,7 @@ public class AirMouse : MonoBehaviour
 
         // Raycast로 마우스 움직임에 따라 레이저 포인터 업데이트
         Ray ray = new Ray(transform.position, transform.forward);
-      
+        //Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
         if (Physics.Raycast(ray, out hit, lineDistance, groundLayer | interactableLayer))
         {
@@ -124,10 +141,16 @@ public class AirMouse : MonoBehaviour
             
             else if (((1 << hit.collider.gameObject.layer) & interactableLayer) != 0)
             {
+
                 //Debug.Log(hit.collider.gameObject.name);
-                isCurveActive = false;
                 ChangeLineColor(Color.blue); // 특정 물체에 닿았을 때 파란색으로 변경
                 SetLineWidth(interactLineWidth); // 특정 물체에 닿았을 때 라인을 얇게 변경
+
+                Vector3 hitPoint = hit.point; // 충돌 지점의 위치를 얻음
+                lineRenderer.SetPosition(1, hitPoint); // 라인렌더러의 끝 위치를 충돌 지점으로 설정
+                selectedObject = hit.collider.gameObject;
+                Debug.Log(selectedObject.name);
+
             }
             else
             {
@@ -141,7 +164,32 @@ public class AirMouse : MonoBehaviour
                 lineRenderer.positionCount = 2;
                 lineRenderer.SetPosition(0, ray.origin);
                 lineRenderer.SetPosition(1, hit.point); // 레이캐스트에 맞춘 지점으로 라인 그리기
-                
+            }
+
+            //Frictions
+            if (isMousePressed && selectedObject != null)
+            {
+                float rotationSpeed = 100.0f; // 회전 속도 조절을 위한 계수
+                float mouseY = Input.GetAxis("Mouse Y"); // 마우스 Y축 이동 값
+                float rotationAmount = 0; // 회전할 각도 계산
+                float zAngle = selectedObject.transform.localRotation.eulerAngles.z;
+
+                // 현재 zAngle을 -180도에서 180도 범위로 변환
+                if (zAngle > 180)
+                {
+                    zAngle -= 360;
+                }
+
+                // 회전하려는 값이 지정된 범위를 넘어가지 않도록 제한
+                float targetAngle = zAngle - mouseY * rotationSpeed * Time.deltaTime;
+                targetAngle = Mathf.Clamp(targetAngle, -25, 0);
+
+                // 제한된 회전 각도에서 현재 각도를 빼서 실제 회전할 양을 계산
+                rotationAmount = targetAngle - zAngle;
+
+                selectedObject.transform.Rotate(Vector3.forward, rotationAmount); // Z축 기준 회전
+
+
             }
         }
         else
@@ -242,5 +290,10 @@ public class AirMouse : MonoBehaviour
         if (clickObject != null)
             return clickObject;
         else return null;
+    }
+
+    public void RecenterView()
+    {
+        Api.Recenter();
     }
 }
