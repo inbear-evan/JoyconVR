@@ -21,14 +21,17 @@ EditorBuildSettings:
     path: Assets/BluetoothAPI/Scenes/demo.unity
     guid: 29265e594f8b847f78e35de39aefa1f9
   - enabled: 0
-    path: Assets/Scenes/TestLevel.unity
+    path: Assets/Scenes/FrictionLabLighting/TestLevel.unity
     guid: 0eb2ab22bd17776428d980335004987d
   - enabled: 0
     path: Assets/Scenes/Main.unity
     guid: b388cbb88ce413c4fa6a933b74976c6f
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/FrictionLab.unity
     guid: 19bdb6ed68026fd41aabd100ad380b9d
+  - enabled: 1
+    path: Assets/Scenes/FrictionLab2.unity
+    guid: 9e672e9621b961a44b5626f65bc573d6
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 7a30c96a894e0624e9f6667f611d307a,
       type: 2}
