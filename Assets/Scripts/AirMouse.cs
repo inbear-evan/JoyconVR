@@ -141,15 +141,15 @@ public class AirMouse : MonoBehaviour
                 TeleportToGroundPoint();
             }
 
-            //if (clickObject != null && clickObject.layer == LayerMask.NameToLayer("INTERACTUI"))
-            //{
-            //    Button button = clickObject.GetComponent<Button>();
-            //    if (button != null)
-            //    {
-            //        button.onClick.Invoke();
-            //        Debug.Log("Button clicked: " + hit.transform.name);
-            //    }
-            //}
+            if (clickObject != null && clickObject.layer == LayerMask.NameToLayer("INTERACTUI"))
+            {
+                Button button = clickObject.GetComponent<Button>();
+                if (button != null)
+                {
+                    button.onClick.Invoke();
+                    Debug.Log("Button clicked: " + hit.transform.name);
+                }
+            }
 
             isCurveActive = false;
             HideGroundCircle();

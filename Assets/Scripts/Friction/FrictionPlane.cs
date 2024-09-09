@@ -14,9 +14,9 @@ public class FrictionPlane : MonoBehaviour
     [SerializeField] GameObject PlasticObj;
     [SerializeField] GameObject WoodObj;
     [SerializeField] GameObject AluObj;
+    public GrapPosition grapPosition;
 
     public float planeAngle;
-
     // Start is called before the first frame update
     void Start()
     {
@@ -62,6 +62,9 @@ public class FrictionPlane : MonoBehaviour
         AluObj.transform.position = new Vector3(0.614000022f, 0.861000001f, 2.09699988f);
         AluObj.transform.rotation = Quaternion.identity;
         AluObj.transform.localScale = new Vector3(0.10864415f, 0.10864415f, 0.10864415f);
-
+        grapPosition.Reset();
     }
+    
+     
+     
 }

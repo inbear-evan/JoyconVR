@@ -34,6 +34,7 @@ public class GrapPosition : MonoBehaviour
             {
                 GetComponent<MeshRenderer>().enabled = false;
                 kgLabel.text = selectedObject.GetComponent<Rigidbody>().mass.ToString("F2") + " Kg";
+                selectedObject = other.gameObject;
                 isInsideCollider = true;
             }
             
@@ -97,5 +98,11 @@ public class GrapPosition : MonoBehaviour
         selectedObject.GetComponent<Rigidbody>().mass = originMass;
         kgLabel.text = originMass.ToString("F2") + " Kg";
     }
-
+    public void Reset()
+    {
+        selectedObject.GetComponent<Rigidbody>().mass = 1;
+        selectedObject = null;
+        kgLabel.text = "1.00 Kg";
+        isEnable = false;
+    }
 }
