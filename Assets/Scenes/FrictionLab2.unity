@@ -9044,6 +9044,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4484523309146931588, guid: a2e92223b7398fc48ab847ca14607096,
         type: 3}
+      propertyPath: movementThreshold
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4484523309146931588, guid: a2e92223b7398fc48ab847ca14607096,
+        type: 3}
       propertyPath: grabbaleLayer.m_Bits
       value: 4096
       objectReference: {fileID: 0}
