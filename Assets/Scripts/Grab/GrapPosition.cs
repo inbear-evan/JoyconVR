@@ -5,7 +5,7 @@ using TMPro;
 public class GrapPosition : MonoBehaviour
 {
     private GameObject selectedObject;
-    private bool isInsideCollider = false; // 콜라이더 안에 있는지 여부
+    public bool isInsideCollider = false; // 콜라이더 안에 있는지 여부
     public LayerMask grabbableLayer;
     public TMP_Text kgLabel;
 

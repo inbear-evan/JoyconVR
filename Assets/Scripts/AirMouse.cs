@@ -12,15 +12,18 @@ public class AirMouse : MonoBehaviour
     [SerializeField] LayerMask interactableLayer;
     [SerializeField] LayerMask grabbaleLayer;
     [SerializeField] float rotateSpeed = 5.0f;
-    [SerializeField] float movementThreshold = 0.01f; // Viewport 기준 민감도
+    [SerializeField] float movementThreshold = 2.0f;
     [SerializeField] float holdTimeThreshold = 1.0f;
     [SerializeField] float lineDistance = 10;
     [SerializeField] LineRenderer lineRenderer;
     [SerializeField] GameObject groundCirclePrefab;
     [SerializeField] float defaultLineWidth = 0.1f;
     [SerializeField] float interactLineWidth = 0.05f;
+    [SerializeField] float grabDistanceAdjustSpeed = 0.5f;
+    [SerializeField] GrapPosition grapPosition;
+    [SerializeField] GrapPosition grapPosition2;
 
-    private Vector3 lastMouseViewportPosition;
+    private Vector3 lastMousePosition;
     private bool isMousePressed;
     private bool isCurveActive;
     private Vector3 groundPoint;
@@ -36,13 +39,17 @@ public class AirMouse : MonoBehaviour
     private float grabDistance = 3.0f;
     private Vector3 initialRayOrigin;
     private Vector3 initialRayDirection;
+    private Quaternion initialRotation;
+
+    [SerializeField] float frictionRotationSpeed = 100.0f; // Friction 회전 속도
+    [SerializeField] float grabDistanceMin = 1.0f;
+    [SerializeField] float grabDistanceMax = 2.5f;
 
     void Start()
     {
         Cursor.visible = showMouse;
-        lastMouseViewportPosition = Camera.main.ScreenToViewportPoint(Input.mousePosition); // Viewport 좌표로 초기화
+        lastMousePosition = Input.mousePosition;
 
-        // LineRenderer 설정
         if (lineRenderer != null)
         {
             lineRenderer.positionCount = 2;
@@ -51,7 +58,6 @@ public class AirMouse : MonoBehaviour
             ChangeLineColor(Color.white);
         }
 
-        // Ground Circle 초기화
         if (groundCirclePrefab != null)
         {
             groundCircleInstance = Instantiate(groundCirclePrefab);
@@ -62,14 +68,13 @@ public class AirMouse : MonoBehaviour
 
     void Update()
     {
-        Vector3 currentMouseViewportPosition = Camera.main.ScreenToViewportPoint(Input.mousePosition); // 현재 마우스 위치를 Viewport 좌표로 변환
-        Vector3 mouseViewportDelta = currentMouseViewportPosition - lastMouseViewportPosition;
+        Vector3 currentMousePosition = Input.mousePosition;
+        Vector3 mouseDelta = currentMousePosition - lastMousePosition;
 
-        // Viewport 기반 회전 로직
-        if (mouseViewportDelta.magnitude > movementThreshold)
+        if (mouseDelta.magnitude > movementThreshold)
         {
-            float rotateX = mouseViewportDelta.y * rotateSpeed;
-            float rotateY = mouseViewportDelta.x * rotateSpeed;
+            float rotateX = mouseDelta.y * rotateSpeed * Time.deltaTime;
+            float rotateY = mouseDelta.x * rotateSpeed * Time.deltaTime;
 
             Vector3 localEulerAngles = transform.localRotation.eulerAngles;
             float newLocalRotationX = localEulerAngles.x - rotateX;
@@ -81,30 +86,59 @@ public class AirMouse : MonoBehaviour
             newLocalRotationY = Mathf.Clamp(newLocalRotationY, -90, 90);
 
             transform.localRotation = Quaternion.Euler(newLocalRotationX, newLocalRotationY, 0);
-            lastMouseViewportPosition = currentMouseViewportPosition; // 마지막 위치 업데이트
+            lastMousePosition = currentMousePosition;
         }
 
         if (Input.GetMouseButtonDown(0))
         {
             isMousePressed = true;
-            print("Mouse Down Event Triggered");
         }
 
         if (Input.GetMouseButtonUp(0))
         {
             if (isGrabbing)
             {
+                if (grapPosition != null && grapPosition.isInsideCollider)
+                {
+                    grapPosition.DisableUp(selectedObject); // 첫 번째 GrapPosition의 범위 내에서 놓기
+                }
+                else if (grapPosition2 != null && grapPosition2.isInsideCollider)
+                {
+                    grapPosition2.DisableUp(selectedObject); // 두 번째 GrapPosition의 범위 내에서 놓기
+                }
                 ReleaseObject();
-                print("ReleaseObject Called");
             }
 
             selectedObject = null;
             isMousePressed = false;
+
+            if (isCurveActive && validGroundPoint && (((1 << clickObject.layer) & groundLayer) != 0))
+            {
+                TeleportToGroundPoint();
+            }
+
+            if (clickObject != null && clickObject.layer == LayerMask.NameToLayer("INTERACTUI"))
+            {
+                Button button = clickObject.GetComponent<Button>();
+                if (button != null)
+                {
+                    button.onClick.Invoke();
+                }
+            }
+
+            isCurveActive = false;
+            HideGroundCircle();
         }
 
-        // Transform 기준으로 Ray 생성
         Ray ray = new Ray(transform.position, transform.forward);
         Vector3 rayEndPoint = ray.origin + ray.direction * lineDistance;
+
+        // 그랩 거리 조절
+        if (isGrabbing)
+        {
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            grabDistance = Mathf.Clamp(grabDistance + scroll * grabDistanceAdjustSpeed, grabDistanceMin, grabDistanceMax);
+        }
 
         if (!isGrabbing)
         {
@@ -142,7 +176,6 @@ public class AirMouse : MonoBehaviour
                     lineRenderer.SetPosition(1, hitInfo.point);
                 }
 
-                // Grab 처리
                 if (((1 << hitInfo.collider.gameObject.layer) & grabbaleLayer) != 0 && isMousePressed && !isGrabbing)
                 {
                     selectedObject = hitInfo.collider.gameObject;
@@ -154,6 +187,7 @@ public class AirMouse : MonoBehaviour
                         grabOffset = selectedObject.transform.position - ray.GetPoint(grabDistance);
                         initialRayOrigin = ray.origin;
                         initialRayDirection = ray.direction;
+                        initialRotation = selectedObject.transform.localRotation; // 초기 회전 저장
                     }
                 }
             }
@@ -171,20 +205,38 @@ public class AirMouse : MonoBehaviour
         }
         else if (isGrabbing && selectedObject != null)
         {
+            initialRayOrigin = transform.position;
+            initialRayDirection = transform.forward;
+
             Vector3 targetPosition = initialRayOrigin + initialRayDirection * grabDistance + grabOffset;
             selectedObject.transform.position = targetPosition;
 
             lineRenderer.SetPosition(0, initialRayOrigin);
             lineRenderer.SetPosition(1, selectedObject.transform.position);
 
-            // 그랩 상태에서도 회전 가능하도록
-            if (isMousePressed && ((1 << selectedObject.layer) & interactableLayer) != 0)
-            {
-                float rotationSpeed = 100.0f;
-                float mouseYRotation = Input.GetAxis("Mouse Y");
-                float rotationAmount = -mouseYRotation * rotationSpeed * Time.deltaTime;
-                selectedObject.transform.Rotate(Vector3.right, rotationAmount, Space.Self);
-            }
+            float rotateX = mouseDelta.y * rotateSpeed * Time.deltaTime;
+            float rotateY = mouseDelta.x * rotateSpeed * Time.deltaTime;
+
+            Vector3 localEulerAngles = transform.localRotation.eulerAngles;
+            float newLocalRotationX = localEulerAngles.x - rotateX;
+            if (newLocalRotationX > 180) newLocalRotationX -= 360;
+            newLocalRotationX = Mathf.Clamp(newLocalRotationX, -90, 90);
+
+            float newLocalRotationY = localEulerAngles.y + rotateY;
+            if (newLocalRotationY > 180) newLocalRotationY -= 360;
+            newLocalRotationY = Mathf.Clamp(newLocalRotationY, -90, 90);
+
+            transform.localRotation = Quaternion.Euler(newLocalRotationX, newLocalRotationY, 0);
+            lastMousePosition = currentMousePosition;
+        }
+
+        // friction 로직: 그랩 중이거나 상호작용 레이어에 있을 때 동작
+        if (isMousePressed && selectedObject != null && ((1 << selectedObject.layer) & interactableLayer) != 0)
+        {
+            float mouseY = Input.GetAxis("Mouse Y");
+            float rotationAmount = mouseY * frictionRotationSpeed * Time.deltaTime;
+
+            selectedObject.transform.Rotate(Vector3.right, rotationAmount, Space.Self);
         }
     }
 
@@ -250,6 +302,14 @@ public class AirMouse : MonoBehaviour
         p += 2 * u * t * p1;
         p += tt * p2;
         return p;
+    }
+
+    void TeleportToGroundPoint()
+    {
+        if (validGroundPoint)
+        {
+            transform.parent.parent.position = new Vector3(groundPoint.x, transform.parent.parent.position.y, groundPoint.z);
+        }
     }
 
     void ShowGroundCircle(Vector3 position)
