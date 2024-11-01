@@ -10,6 +10,10 @@ public class GrapPosition : MonoBehaviour
     public TMP_Text kgLabel;
 
     bool isEnable= false;
+
+
+    public ClickSelectObject CSO;
+    
     private void Start()
     {
         kgLabel.text = "";
@@ -88,20 +92,29 @@ public class GrapPosition : MonoBehaviour
     }
     public void OnClickWeightUP()
     {
-        float originMass = selectedObject.GetComponent<Rigidbody>().mass + 0.05f;
-        selectedObject.GetComponent<Rigidbody>().mass = originMass;
-        kgLabel.text = originMass.ToString("F2") + " Kg";
+        if (selectedObject != null)
+        {
+            float originMass = selectedObject.GetComponent<Rigidbody>().mass + 0.05f;
+            selectedObject.GetComponent<Rigidbody>().mass = originMass;
+            kgLabel.text = originMass.ToString("F2") + " Kg";
+        }
     }
     public void OnClickWeightDown()
     {
-        float originMass = selectedObject.GetComponent<Rigidbody>().mass - 0.05f;
-        selectedObject.GetComponent<Rigidbody>().mass = originMass;
-        kgLabel.text = originMass.ToString("F2") + " Kg";
+        if (selectedObject != null)
+        {
+            float originMass = selectedObject.GetComponent<Rigidbody>().mass - 0.05f;
+            selectedObject.GetComponent<Rigidbody>().mass = originMass;
+            kgLabel.text = originMass.ToString("F2") + " Kg";
+        }
     }
     public void Reset()
     {
-        selectedObject.GetComponent<Rigidbody>().mass = 1;
-        selectedObject = null;
+        if (selectedObject != null)
+        {
+            selectedObject.GetComponent<Rigidbody>().mass = 1;
+            selectedObject = null;
+        }
         kgLabel.text = "1.00 Kg";
         isEnable = false;
     }
